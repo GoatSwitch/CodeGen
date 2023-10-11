@@ -5,52 +5,26 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import json
 import os
-import subprocess
 import time
 import typing as tp
-from collections import OrderedDict, defaultdict
-from concurrent.futures.process import ProcessPoolExecutor
+from collections import OrderedDict, defaultdict, namedtuple
 from logging import getLogger
 from pathlib import Path
-from .evaluator import gather_model_outputs
 
 import fastBPE
 import numpy as np
 import torch
-from sklearn.metrics import roc_auc_score, average_precision_score
 
-from codegen_sources.IR_tools.utils_ir import code_to_ir, ERROR_MESSAGE
 import codegen_sources.dataloaders.transforms as transf
-from codegen_sources.preprocessing.lang_processors import LangProcessor, IRProcessor
-from .comp_acc_computation import (
-    load_evosuite_transcoder_tests,
-    eval_function_output,
-    GFG,
-    FAILED_IR_COMP_,
-    init_eval_scripts_folder,
-    CODENET_EVAL_FOLDER,
-    EVAL_SCRIPT_FOLDER,
-)
 from ..data.loader import DATASET_SPLITS
 from ..trainer import get_programming_language_name
 from ..utils import (
-    to_cuda,
-    restore_segmentation,
-    concat_batches,
-    show_batch,
     add_noise,
     convert_to_text,
     REPO_ROOT,
-    restore_segmentation_sentence,
-    read_file_lines,
 )
-from .subtoken_score import run_subtoken_score
 import sys
-
-from ..vizualization_utils import vizualize_do_files, vizualize_translated_files
-
 sys.path.append(str(REPO_ROOT))
 
 PathLike = tp.Union[Path, str]
@@ -69,8 +43,8 @@ assert os.path.isfile(BLEU_SCRIPT_PATH)
 ROOT_FOLDER = Path(__file__).parents[4]
 
 logger = getLogger()
-from .evaluator import EncDecEvaluator
-from collections import namedtuple
+from .evaluator import (EncDecEvaluator,
+                        gather_model_outputs)
 
 
 class GSEvaluator(EncDecEvaluator):
@@ -432,80 +406,3 @@ class GSEvaluator(EncDecEvaluator):
         ret = self.code_to_tokens(x, "python")
         print(f"{len(ret)=}")
         return ret, torch.tensor([ret.shape[0]])
-
-
-def get_l1l2_string(lang1, lang2, deobfuscation_proba):
-    l1l2 = [lang1, lang2]
-    if deobfuscation_proba is not None:
-        l1l2.append(f"obf_proba_{1 - deobfuscation_proba}")
-
-    l1l2 = "-".join(l1l2)
-    return l1l2
-
-
-def eval_moses_bleu(ref, hyp):
-    """
-    Given a file of hypothesis and reference files,
-    evaluate the BLEU score using Moses scripts.
-    """
-    assert os.path.isfile(hyp)
-    assert os.path.isfile(ref) or os.path.isfile(ref + "0")
-    assert os.path.isfile(BLEU_SCRIPT_PATH)
-    command = BLEU_SCRIPT_PATH + " %s < %s"
-    p = subprocess.Popen(command % (ref, hyp), stdout=subprocess.PIPE, shell=True)
-    result = p.communicate()[0].decode("utf-8")
-    if result.startswith("BLEU"):
-        return float(result[7 : result.index(",")])
-    else:
-        logger.warning('Impossible to parse BLEU score! "%s"' % result)
-        return -1
-
-
-def unsegment_and_detokenize(
-    sentences,
-    lang,
-    tokenization_mode: str,
-    sentencepiece_model_path: tp.Optional[PathLike] = None,
-):
-    sentences = [
-        restore_segmentation_sentence(
-            s,
-            tokenization_mode=tokenization_mode,
-            sentencepiece_model_path=sentencepiece_model_path,
-        )
-        for s in sentences
-    ]
-    lang1_detokenizer = LangProcessor.processors[
-        get_programming_language_name(lang)
-    ]().detokenize_code
-    sentences = [lang1_detokenizer(s) for s in sentences]
-    return sentences
-
-
-def compute_bleu(
-    gen_path: str,
-    ref_path: str,
-    score_name: str,
-    scores: tp.Dict[str, float],
-    filter_failed_irs=False,
-):
-    if filter_failed_irs:
-        hypotheses = read_file_lines(gen_path)
-        references = read_file_lines(ref_path)
-        errors = [h.strip().startswith(FAILED_IR_COMP_) for h in hypotheses]
-        assert len(hypotheses) == len(references) == len(errors)
-        hypotheses = [elmt for elmt, err in zip(hypotheses, errors) if not err]
-        references = [elmt for elmt, err in zip(references, errors) if not err]
-        ref = ref_path.replace(".txt", "_filtered.txt")
-        gen = gen_path.replace(".txt", "_filtered.txt")
-        with open(gen, "w") as f:
-            f.writelines(hypotheses)
-
-        with open(ref, "w") as f:
-            f.writelines(references)
-    else:
-        ref = ref_path
-        gen = gen_path
-    bleu = eval_moses_bleu(ref, gen)
-    logger.info("BLEU %s %s : %f" % (gen, ref, bleu))
-    scores[score_name] = bleu
