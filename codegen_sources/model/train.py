@@ -20,6 +20,8 @@ from codegen_sources.model.src.evaluation.evaluator import (
     EncDecEvaluator,
     SingleEvaluator,
 )
+from codegen_sources.model.src.evaluation.evaluator_gs import GSEvaluator
+
 from codegen_sources.model.src.model import (
     build_classifier,
     build_model,
@@ -834,7 +836,17 @@ def get_parser():
         "--n_share_dec", type=int, default=0, help="Number of decoder layers to share"
     )
 
+    parser.add_argument(
+        "--use_goatswitch",
+        type=bool_flag,
+        default=True,
+        help="Use GoatSwitch for MT"
+    )
+
     return parser
+
+def get_gs_model():
+    return "GoatSwitch"
 
 
 def main(params):
@@ -854,6 +866,8 @@ def main(params):
     print_memory(logger, "before build modules")
     if params.encoder_only:
         model = build_model(params, data["dico"])
+    elif params.use_goatswitch:
+        model = get_gs_model()
     else:
         encoder, decoder = build_model(params, data["dico"])
     print_memory(logger, "before build classifier")
@@ -868,6 +882,18 @@ def main(params):
         trainer = SingleTrainer(model, data, params, classifier)
         if not params.train_only:
             evaluator = SingleEvaluator(trainer, data, params)
+    elif params.use_goatswitch:
+        from collections import namedtuple
+        MockTrainer = namedtuple('MockTrainer',
+        [
+            'epoch',
+            'encoder',
+            'decoder',
+            'gs_model'
+         ]
+        )
+        trainer = MockTrainer(encoder=None, decoder=None, epoch=0, gs_model=model)
+        evaluator = GSEvaluator(trainer, data, params)
     else:
         trainer = EncDecTrainer(encoder, decoder, data, params)
         if not params.train_only:
