@@ -45,6 +45,7 @@ ROOT_FOLDER = Path(__file__).parents[4]
 logger = getLogger()
 from .evaluator import (EncDecEvaluator,
                         gather_model_outputs)
+from .gs_connector import GSConnector
 
 
 class GSEvaluator(EncDecEvaluator):
@@ -56,6 +57,7 @@ class GSEvaluator(EncDecEvaluator):
         self.gs_model = trainer.gs_model
         self.params = params
         self.code_to_token_pipe = self.get_code_to_token_pipe()
+        self.gs_connector = GSConnector()
 
     def eval_mode(self):
         pass
@@ -298,11 +300,11 @@ class GSEvaluator(EncDecEvaluator):
         x1, len1, langs1 = seq1
         x2, len2, langs2 = seq2
         
-        r1 = self.tokens_to_code(x1, len1, "python", self.params)
+        # r1 = self.tokens_to_code(x1, len1, "python", self.params)
         # print(r1[0])
         # assert (self.code_to_tokens(r1, "python")==x1).all().item()
-        r2 = self.tokens_to_code(x2, len2, "python", self.params)
-        return r1, r2
+        # r2 = self.tokens_to_code(x2, len2, "python", self.params)
+        return x1, x2
 
     def get_code_to_token_pipe(self):
         BPE_path = "data/bpe/cpp-java-python/codes"
@@ -401,8 +403,20 @@ class GSEvaluator(EncDecEvaluator):
         return text_hyps, generated
     
     def gen_mt_GS(self, x, len_x, lang2_id):
-        print(x)
+        x = self.tokens_to_code(x, len_x, "python", self.params)
+#         ret = ['bool isMajority ( int a [ ] , int n ) { unordered_map < int , int > mp ;\
+# for ( int j = 0 ; j < n ; j ++ ) mp [ a [ j ] ] ++ ;\
+# for ( auto x : mp ) if ( x.second \
+# >= n / 2 ) return true ; return false ; }']
+#         ret = ['int sumDigits ( int no ) {\n  return no == 0 ? 0 : no % 10 + sumDigits ( no / 10 ) ;\n}\n']
+        # ret = ['int findSum ( int n ) {\n  int ans = 0 ;\n  for ( int i = 1 ;\n  i <= n ;\n  i ++ ) for ( int j = 1 ;\n  j <= n ;\n  j ++ ) ans += ( i / j ) ;\n  return ans ;\n}\n']
+        print("-"*100)
+        print(x[0])
         print(f"{len_x=}{lang2_id=}")
-        ret = self.code_to_tokens(x, "python")
-        print(f"{len(ret)=}")
-        return ret, torch.tensor([ret.shape[0]])
+
+        x[0] = f"import numpy as np \nimport math\nfrom math import *\nimport collections\nfrom collections import *\nimport heapq\nimport itertools\nimport random\nimport sys\n\n{x[0]}"
+        ret = self.gs_connector.send_convert_request(x[0])
+        print(f"{ret=}")
+        ret = self.code_to_tokens(ret, "cpp")
+        len_ret = torch.tensor([ret.shape[0]])
+        return ret, len_ret
