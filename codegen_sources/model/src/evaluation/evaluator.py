@@ -90,7 +90,7 @@ class Evaluator(object):
             self.params.ref_paths = {}
             self.params.id_paths = {}
             self.params.eval_scripts_folders = {}
-            if params.eval_bleu or params.eval_subtoken_score:
+            if params.eval_bleu or params.eval_subtoken_score or params.eval_computation:
                 self.create_reference_files()
             if self.params.eval_st:
                 logger.info("Loading evosuite tests")
