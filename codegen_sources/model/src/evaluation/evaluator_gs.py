@@ -81,6 +81,9 @@ class GSEvaluator(EncDecEvaluator):
         Evaluate perplexity and next word prediction accuracy.
         """
         params = self.params
+        if data_set != "test":
+            # skip
+            return
         assert data_set in EVAL_DATASET_SPLITS
         assert lang1 in params.langs
         assert lang2 in params.langs
@@ -148,6 +151,7 @@ class GSEvaluator(EncDecEvaluator):
                     data_set, lang1, lang2 if lang2 != lang1 else None, span=span
                 )
             ):
+                print(f"----------------------- iter {i=}")
                 if i % params.world_size != params.global_rank:
                     continue  # Distribute batches on all GPUs
 
@@ -174,6 +178,9 @@ class GSEvaluator(EncDecEvaluator):
                 enc1, dec2 = self.do_forward(
                     encoder, decoder, seq1, seq2, spans, params.fp16
                 )
+                # merge enc1 and dec2 (py and cpp code) to give to gs eval later
+                enc1 = (seq1, seq2)
+
                 self.update_word_metrics(
                     word_metrics,
                     seq2,
@@ -403,7 +410,15 @@ class GSEvaluator(EncDecEvaluator):
         return text_hyps, generated
     
     def gen_mt_GS(self, x, len_x, lang2_id):
-        x = self.tokens_to_code(x, len_x, "python", self.params)
+        py_enc, cpp_enc = x
+        py_x, py_len, _ = py_enc
+        cpp_x, cpp_len, _ = cpp_enc
+        py_x = self.tokens_to_code(py_x, py_len, "python", self.params)
+        cpp_x = self.tokens_to_code(cpp_x, cpp_len, "cpp", self.params)
+        print(f"{py_x=}")
+        print(f"{cpp_x=}")
+        cpp_function_def = cpp_x[0].split("{")[0]
+        print(f"{cpp_function_def=}")
 #         ret = ['bool isMajority ( int a [ ] , int n ) { unordered_map < int , int > mp ;\
 # for ( int j = 0 ; j < n ; j ++ ) mp [ a [ j ] ] ++ ;\
 # for ( auto x : mp ) if ( x.second \
@@ -411,11 +426,19 @@ class GSEvaluator(EncDecEvaluator):
 #         ret = ['int sumDigits ( int no ) {\n  return no == 0 ? 0 : no % 10 + sumDigits ( no / 10 ) ;\n}\n']
         # ret = ['int findSum ( int n ) {\n  int ans = 0 ;\n  for ( int i = 1 ;\n  i <= n ;\n  i ++ ) for ( int j = 1 ;\n  j <= n ;\n  j ++ ) ans += ( i / j ) ;\n  return ans ;\n}\n']
         print("-"*100)
-        print(x[0])
+        print(py_x[0])
         print(f"{len_x=}{lang2_id=}")
+        py_x[0] = f"import numpy as np \nimport math\nfrom math import *\nimport collections\nfrom collections import *\nimport heapq\nimport itertools\nimport random\nimport sys\n\n{py_x[0]}"
 
-        x[0] = f"import numpy as np \nimport math\nfrom math import *\nimport collections\nfrom collections import *\nimport heapq\nimport itertools\nimport random\nimport sys\n\n{x[0]}"
-        ret = self.gs_connector.send_convert_request(x[0])
+        source_code_comments = "# Function definition:\n"
+        source_code_comments += "# " + cpp_function_def + "\n"
+        source_code_comments += "# Only generate tests for these types!\n"
+        py_x[0] = source_code_comments + py_x[0]
+
+        print("sending to gs:")
+        print(py_x)
+
+        ret = self.gs_connector.send_convert_request(py_x[0])
         print(f"{ret=}")
         ret = self.code_to_tokens(ret, "cpp")
         len_ret = torch.tensor([ret.shape[0]])
