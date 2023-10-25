@@ -213,6 +213,31 @@ def convert_filled_arguments(script_model, f, lang, lang_processor, f_name=None)
     assert lang in {"java", "cpp"}
     header = []
     arguments_gold = lang_processor.extract_arguments(script_model)
+    # GS: this does not work when script has alot of commented code at beginning
+    # TODO: why does it work in original?
+    """
+    e.g.
+    // Copyright (c) 2019-present, Facebook, Inc.
+    // All rights reserved.
+    //
+    // This source code is licensed under the license found in the
+    // LICENSE file in the root directory of this source tree.
+    //
+
+    #include <iostream>
+    #include <cstdlib>
+    #include <string>
+    #include <vector>
+    #include <fstream>
+    """
+    # workaround: remove commented code
+    script_model = "\n".join(
+        [
+            line
+            for line in script_model.split("\n")
+            if not line.strip().startswith("//")
+        ]
+    )
     return_type_gold = get_return_type(script_model)
 
     arguments_filled = lang_processor.extract_arguments(f)

@@ -20,7 +20,9 @@ from codegen_sources.model.src.evaluation.evaluator import (
     EncDecEvaluator,
     SingleEvaluator,
 )
-from codegen_sources.model.src.evaluation.evaluator_gs import GSEvaluator
+# GS: actiavte our evaluator
+from codegen_sources.model.src.evaluation.evaluator_gs import GSEvaluator as EncDecEvaluator
+#from codegen_sources.model.src.evaluation.evaluator import EncDecEvaluator
 
 from codegen_sources.model.src.model import (
     build_classifier,
@@ -893,7 +895,7 @@ def main(params):
          ]
         )
         trainer = MockTrainer(encoder=None, decoder=None, epoch=0, gs_model=model)
-        evaluator = GSEvaluator(trainer, data, params)
+        evaluator = EncDecEvaluator(trainer, data, params)
     else:
         trainer = EncDecTrainer(encoder, decoder, data, params)
         if not params.train_only:
@@ -1027,20 +1029,40 @@ def main(params):
 
 if __name__ == "__main__":
 
-    # generate parser / parse parameters
-    parser = get_parser()
-    params = parser.parse_args()
+    # GS:
+    import pickle
 
-    # debug mode
-    if params.debug:
-        params.exp_name = "debug"
-        params.exp_id = "debug_%08i" % random.randint(0, 100000000)
-        params.debug_slurm = True
-        params.debug_train = True
+    save_params = True
+    
+    if save_params:
+        # generate parser / parse parameters
+        parser = get_parser()
+        params = parser.parse_args()
 
-    # check parameters
-    check_data_params(params)
-    check_model_params(params)
+        # debug mode
+        if params.debug:
+            params.exp_name = "debug"
+            params.exp_id = "debug_%08i" % random.randint(0, 100000000)
+            params.debug_slurm = True
+            params.debug_train = True
+
+        # check parameters
+        check_data_params(params)
+        check_model_params(params)
+
+        print("myparams", params)
+        print("type params", type(params))
+        # type params <class 'argparse.Namespace'>
+        # save this params to a file
+        with open("myparams.pkl", "wb") as f:
+            pickle.dump(params, f)
+
+    else: 
+        # read params from a file
+        with open("myparams.pkl", "rb") as f:
+            params = pickle.load(f)
+        print("myparams", params)
+        print("type params", type(params))
 
     # run experiment
     main(params)

@@ -49,6 +49,9 @@ from .gs_connector import GSConnector
 
 
 class GSEvaluator(EncDecEvaluator):
+    # GS: counter to know which function id comes next
+    FUNC_ID_COUNTER = 0
+
     def __init__(self, trainer, data, params) -> None:
         """
         Build encoder / decoder evaluator.
@@ -81,8 +84,8 @@ class GSEvaluator(EncDecEvaluator):
         Evaluate perplexity and next word prediction accuracy.
         """
         params = self.params
+        # GS:
         if data_set != "test":
-            # skip
             return
         assert data_set in EVAL_DATASET_SPLITS
         assert lang1 in params.langs
@@ -369,6 +372,14 @@ class GSEvaluator(EncDecEvaluator):
 
 
     def generate_mt_hypotheses(self, enc1, len1, lang2_id, decoder, params):
+        # GS:s
+        id_path = params.id_paths[("python_sa", "cpp_sa", "test")]
+        print(f"{id_path=}")
+        if not self.check_if_script_exists(id_path):
+            # skip
+            return [[""]], torch.ones(10,1)
+
+
         len_v = (10 * len1 + 10).clamp(max=params.max_len)
         if params.beam_size == 1:
             if params.number_samples > 1:
@@ -443,3 +454,18 @@ class GSEvaluator(EncDecEvaluator):
         ret = self.code_to_tokens(ret, "cpp")
         len_ret = torch.tensor([ret.shape[0]])
         return ret, len_ret
+
+    def check_if_script_exists(self, id_path):
+        from ..utils import read_file_lines
+        id = read_file_lines(id_path)
+        print("myids:", id)
+        i = id[self.FUNC_ID_COUNTER].rstrip()
+        self.FUNC_ID_COUNTER += 1
+        print("checking id:", i)
+        lang = "cpp"
+        script_folder = "/home/mw3155/CodeGen/data/transcoder_evaluation_gfg"
+        EXT = {"cpp": ".cpp", "java": ".java", "python": ".py"}
+        script_model_path = os.path.join(script_folder, f"{lang}/{i}{EXT[lang]}")
+        if not os.path.exists(script_model_path):
+            return False
+        return True

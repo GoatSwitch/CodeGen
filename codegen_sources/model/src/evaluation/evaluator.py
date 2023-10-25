@@ -134,11 +134,13 @@ class Evaluator(object):
             _lang1, _lang2 = (lang1, lang2) if lang1 < lang2 else (lang2, lang1)
             key = (_lang1, _lang2) if span is None else (_lang1, _lang2, span)
             iterator = self.data["para"][key][data_set].get_iterator(
-                shuffle=False,
                 group_by_size=True,
                 n_sentences=n_sentences,
                 tokens_per_batch=self.params.eval_tokens_per_batch,
                 max_batch_size=-1,
+                # GS:
+                shuffle=True,
+                seed=10,
             )
         for batch in iterator:
             yield batch if lang2 is None or lang1 == lang2 or lang1 <= lang2 else batch[

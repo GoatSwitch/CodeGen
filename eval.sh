@@ -1,4 +1,4 @@
-# MODEL=<PATH_TO_MODEL>
+#MODEL=TransCoder_model_1.pth
 # --bt_steps 'python_sa-cpp_sa-python_sa,cpp_sa-python_sa-cpp_sa'    \
 #--dump_path '/home/alex/dump_codegen' \
 #--data_path '/home/alex/data/transcoder_test_set/test_dataset' \
@@ -26,10 +26,10 @@ python3 codegen_sources/model/train.py \
 --save_periodic 1 \
 --reload_model "$MODEL,$MODEL" \
 --reload_encoder_for_decoder false \
---n_sentences_eval 10 \
+--n_sentences_eval 2 \
 --retry_mistmatching_types true \
+--use_goatswitch true \
 --batch_size 1
-# --use_goatswitch false \
 # TODO batch_size could be used to make parallel somehow
 
 
