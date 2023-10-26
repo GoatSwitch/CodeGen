@@ -235,7 +235,8 @@ def convert_filled_arguments(script_model, f, lang, lang_processor, f_name=None)
         [
             line
             for line in script_model.split("\n")
-            if not line.strip().startswith("//")
+            # space after // is important; otherwise it will remove //TOFILL
+            if not line.strip().startswith("// ")
         ]
     )
     return_type_gold = get_return_type(script_model)
@@ -265,7 +266,21 @@ def convert_filled_arguments(script_model, f, lang, lang_processor, f_name=None)
         param_type_filled = param_type_filled.strip()
         param_type_gold = param_type_gold.strip()
         if param_type_filled == param_type_gold:
-            new_params_strings.append(f"param{param_index}")
+            # GS:
+            # our cpp function uses vectors -> we dont need int len parameter
+            # e.g.
+            # gold: int param0[], int param1, int param2
+            # ours: vector<int> param0, int param2
+            # -> we need to skip param1
+            # except if we are at last param; then just add it normally
+            if "vect" in new_params_strings[-1] and not param_index == len(argument_types_gold) - 1:
+                # add next param if not also a array
+                if "arr" not in argument_types_gold[param_index + 1]:
+                    new_params_strings.append(f"param{param_index + 1}")
+                # else if next param is array, do nothing
+                continue
+            else:
+                new_params_strings.append(f"param{param_index}")
         elif lang == "cpp":
             if "vector" in param_type_filled:
                 if "int" not in argument_types_gold:

@@ -26,7 +26,7 @@ python3 codegen_sources/model/train.py \
 --save_periodic 1 \
 --reload_model "$MODEL,$MODEL" \
 --reload_encoder_for_decoder false \
---n_sentences_eval 2 \
+--n_sentences_eval 1500 \
 --retry_mistmatching_types true \
 --use_goatswitch true \
 --batch_size 1

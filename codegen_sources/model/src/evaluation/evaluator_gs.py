@@ -430,12 +430,6 @@ class GSEvaluator(EncDecEvaluator):
         print(f"{cpp_x=}")
         cpp_function_def = cpp_x[0].split("{")[0]
         print(f"{cpp_function_def=}")
-#         ret = ['bool isMajority ( int a [ ] , int n ) { unordered_map < int , int > mp ;\
-# for ( int j = 0 ; j < n ; j ++ ) mp [ a [ j ] ] ++ ;\
-# for ( auto x : mp ) if ( x.second \
-# >= n / 2 ) return true ; return false ; }']
-#         ret = ['int sumDigits ( int no ) {\n  return no == 0 ? 0 : no % 10 + sumDigits ( no / 10 ) ;\n}\n']
-        # ret = ['int findSum ( int n ) {\n  int ans = 0 ;\n  for ( int i = 1 ;\n  i <= n ;\n  i ++ ) for ( int j = 1 ;\n  j <= n ;\n  j ++ ) ans += ( i / j ) ;\n  return ans ;\n}\n']
         print("-"*100)
         print(py_x[0])
         print(f"{len_x=}{lang2_id=}")
@@ -450,7 +444,26 @@ class GSEvaluator(EncDecEvaluator):
         print(py_x)
 
         ret = self.gs_connector.send_convert_request(py_x[0])
-        print(f"{ret=}")
+        #ret=['#include<iostream>;#include <algorithm>;#include <vector>;using namespace std;;;int search(vector<int> arr, int n, int x) {;    for (int i = 0; i < n; i++) {;        if (arr[i] == x) {;            return i;;        };    };    return -1;;}']
+        #ret=['// Function definition:\n// int fun ( unsigned int n )\n// Only generate tests for these types!\n#include <iostream>\n#include <vector>\n#include <string>\n#include <cmath>\n#include <math.h>\n#include <algorithm>\n#include <bits/stdc++.h>\n#include <queue>\n#include <iterator>\n#include <random>\n#include <sys/types.h>\n\nint fun(unsigned int n) {\n  return n & (n - 1)\n\n}']
+        #ret=['#include <iostream>;#include <vector>;#include <string>;#include <cmath>;#include <math.h>;#include <algorithm>;#include <bits/stdc++.h>;#include <queue>;#include <iterator>;#include <random>;#include <sys/types.h>;;int fun(unsigned int n) {;  return n & (n - 1);;}']
+        #ret=['#include <iostream>\n#include <vector>\n#include <string>\n#include <math.h>\n\nusing namespace std;\n\nint search(vector<int> arr, int x) {\n  int n = arr.size();\n  for (int j = 0; j < n; j++) {\n    if (x == arr[j]) {\n      return j;\n    }\n  }\n  return -1;\n}']
+        print("ret from gs:")
+        print(ret)
+
+        # GS: postprocess model output
+        # remove comments
+        lines = ret[0].split("\n")
+        lines = [l for l in lines if not l.strip().startswith("//")]
+        ret = ["\n".join(lines)]
+        #ret=['#include <iostream>\n#include <vector>\nint power(int n) {\n    if (n == 1) {\n        return 2;\n    }\n    return 2 * power(n - 1);\n}']
+        # evaluation cannot handle includes in the code 
+        # because all newlines are deleted later
+        # replace newlines with semi-colons
+        ret = [r.replace("\n", ";") for r in ret]
+        print("ret after preprocessing:")
+        print(ret)
+
         ret = self.code_to_tokens(ret, "cpp")
         len_ret = torch.tensor([ret.shape[0]])
         return ret, len_ret
@@ -458,10 +471,12 @@ class GSEvaluator(EncDecEvaluator):
     def check_if_script_exists(self, id_path):
         from ..utils import read_file_lines
         id = read_file_lines(id_path)
-        print("myids:", id)
         i = id[self.FUNC_ID_COUNTER].rstrip()
         self.FUNC_ID_COUNTER += 1
         print("checking id:", i)
+        #if "HYPERCUBE_GRAPH" not in i:
+        #if "HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING" not in i:
+        #    return False
         lang = "cpp"
         script_folder = "/home/mw3155/CodeGen/data/transcoder_evaluation_gfg"
         EXT = {"cpp": ".cpp", "java": ".java", "python": ".py"}

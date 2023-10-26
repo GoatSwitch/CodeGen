@@ -139,8 +139,9 @@ class Evaluator(object):
                 tokens_per_batch=self.params.eval_tokens_per_batch,
                 max_batch_size=-1,
                 # GS:
-                shuffle=True,
-                seed=10,
+                shuffle=False,
+                #shuffle=True,
+                #seed=10,
             )
         for batch in iterator:
             yield batch if lang2 is None or lang1 == lang2 or lang1 <= lang2 else batch[
