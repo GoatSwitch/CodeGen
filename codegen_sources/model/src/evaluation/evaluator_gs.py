@@ -448,6 +448,9 @@ class GSEvaluator(EncDecEvaluator):
         #ret=['// Function definition:\n// int fun ( unsigned int n )\n// Only generate tests for these types!\n#include <iostream>\n#include <vector>\n#include <string>\n#include <cmath>\n#include <math.h>\n#include <algorithm>\n#include <bits/stdc++.h>\n#include <queue>\n#include <iterator>\n#include <random>\n#include <sys/types.h>\n\nint fun(unsigned int n) {\n  return n & (n - 1)\n\n}']
         #ret=['#include <iostream>;#include <vector>;#include <string>;#include <cmath>;#include <math.h>;#include <algorithm>;#include <bits/stdc++.h>;#include <queue>;#include <iterator>;#include <random>;#include <sys/types.h>;;int fun(unsigned int n) {;  return n & (n - 1);;}']
         #ret=['#include <iostream>\n#include <vector>\n#include <string>\n#include <math.h>\n\nusing namespace std;\n\nint search(vector<int> arr, int x) {\n  int n = arr.size();\n  for (int j = 0; j < n; j++) {\n    if (x == arr[j]) {\n      return j;\n    }\n  }\n  return -1;\n}']
+        #ret=['#include <iostream>\n#include <vector>\n#include <string>\n#include <math.h>\n#include <algorithm>\n\nusing namespace std;\n\ndouble getMedian(vector<int> ar1, vector<int> ar2, int n) {\n    int i = 0;\n    int j = 0;\n    int m1 = -1;\n    int m2 = -1;\n    int count = 0;\n    while (count < n + 1) {\n        count++;\n        if (i == n) {\n            m1 = m2;\n            m2 = ar2[0];\n            break;\n        } else if (j == n) {\n            m1 = m2;\n            m2 = ar1[0];\n            break;\n        }\n        if (ar1[i] < ar2[j]) {\n            m1 = m2;\n            m2 = ar1[i];\n            i++;\n        } else {\n            m1 = m2;\n            m2 = ar2[j];\n            j++;\n        }\n    }\n    return (m1 + m2) / 2;\n}']
+        #ret=['#include <iostream>\n#include <vector>\n#include <cmath>\n\nusing namespace std;\n\nint maxTasks(vector<int> high, vector<int> low, int n) {\n    if (n <= 0)\n        return 0;\n    return max(high[n - 1] + maxTasks(high, low, (n - 2)), low[n - 1] + maxTasks(high, low, (n - 1)));\n}']
+        from pprint import pprint
         print("ret from gs:")
         print(ret)
 
@@ -455,12 +458,11 @@ class GSEvaluator(EncDecEvaluator):
         # remove comments
         lines = ret[0].split("\n")
         lines = [l for l in lines if not l.strip().startswith("//")]
-        ret = ["\n".join(lines)]
-        #ret=['#include <iostream>\n#include <vector>\nint power(int n) {\n    if (n == 1) {\n        return 2;\n    }\n    return 2 * power(n - 1);\n}']
         # evaluation cannot handle includes in the code 
         # because all newlines are deleted later
-        # replace newlines with semi-colons
-        ret = [r.replace("\n", ";") for r in ret]
+        # add semicolon after include lines
+        lines = [l + ";" if l.strip().startswith("#include") else l for l in lines]
+        ret = ["\n".join(lines)]
         print("ret after preprocessing:")
         print(ret)
 
@@ -474,8 +476,7 @@ class GSEvaluator(EncDecEvaluator):
         i = id[self.FUNC_ID_COUNTER].rstrip()
         self.FUNC_ID_COUNTER += 1
         print("checking id:", i)
-        #if "HYPERCUBE_GRAPH" not in i:
-        #if "HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING" not in i:
+        #if "CHECK_ARRAY_MAJORITY_ELEMENT" not in i:
         #    return False
         lang = "cpp"
         script_folder = "/home/mw3155/CodeGen/data/transcoder_evaluation_gfg"

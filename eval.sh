@@ -1,8 +1,12 @@
+# make current timestamp in YYYY-MM-DD-HH-MM-SS format
+TIMESTAMP=$(date +"%Y-%m-%d-%H-%M-%S")
+
 #MODEL=TransCoder_model_1.pth
 # --bt_steps 'python_sa-cpp_sa-python_sa,cpp_sa-python_sa-cpp_sa'    \
 #--dump_path '/home/alex/dump_codegen' \
 #--data_path '/home/alex/data/transcoder_test_set/test_dataset' \
 #--has_sentence_ids "valid|para,test|para" \
+
 python3 codegen_sources/model/train.py \
 --eval_only true \
 --exp_name transcoder_eval \
@@ -29,7 +33,13 @@ python3 codegen_sources/model/train.py \
 --n_sentences_eval 1500 \
 --retry_mistmatching_types true \
 --use_goatswitch true \
---batch_size 1
+--batch_size 1 \
+|& tee log_eval_$TIMESTAMP.txt
+# save stdout and stderr with tee
+
+
 # TODO batch_size could be used to make parallel somehow
+# save output with tee
+
 
 
