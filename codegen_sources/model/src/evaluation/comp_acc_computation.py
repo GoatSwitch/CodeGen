@@ -273,7 +273,7 @@ def convert_filled_arguments(script_model, f, lang, lang_processor, f_name=None)
             # ours: vector<int> param0, int param2
             # -> we need to skip param1
             # except if we are at last param; then just add it normally
-            if "vect" in new_params_strings[-1] and not param_index == len(argument_types_gold) - 1:
+            if len(new_params_strings) != 0 and "vect" in new_params_strings[-1] and not param_index == len(argument_types_gold) - 1:
                 # add next param if not also a array
                 if "arr" not in argument_types_gold[param_index + 1]:
                     new_params_strings.append(f"param{param_index + 1}")
