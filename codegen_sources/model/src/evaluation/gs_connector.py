@@ -106,10 +106,14 @@ class GSConnector:
 
         # take solution or first translation
         solution = [""]
-        if len(self.callbacks["log_solution"]) > 0 and len(self.callbacks["log_translation"][0]) > 0 and self.callbacks["log_solution"][0][0] != "":
-            solution = self.callbacks["log_solution"][0]
-        elif len(self.callbacks["log_translation"]) > 0:
-            solution = self.callbacks["log_translation"][0]
-        else:
-            logger.error("No solution or translation received")
-        return solution
+        try:
+            if len(self.callbacks["log_solution"]) > 0 and len(self.callbacks["log_translation"][0]) > 0 and self.callbacks["log_solution"][0][0] != "":
+                solution = self.callbacks["log_solution"][0]
+            elif len(self.callbacks["log_translation"]) > 0:
+                solution = self.callbacks["log_translation"][0]
+            else:
+                logger.error("No solution or translation received")
+            return solution
+        except Exception as e:
+            logger.error("GSCONNECTOR Exception: " + str(e))
+            return solution
