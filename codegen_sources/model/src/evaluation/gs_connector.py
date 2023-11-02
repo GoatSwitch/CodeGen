@@ -93,7 +93,7 @@ class GSConnector:
         self.hub_connection.send("ConvertAsync", [code, self.target_language])
 
         # wait until solution is received
-        max_wait = 120
+        max_wait = 200
         start_time = time.time()
         while len(self.callbacks["log_solution"]) < 1:
             if time.time() - start_time > max_wait:
